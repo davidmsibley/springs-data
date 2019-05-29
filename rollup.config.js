@@ -1,18 +1,25 @@
 import html from 'rollup-plugin-html';
 import minify from 'rollup-plugin-minify-es';
+import commonjs from 'rollup-plugin-commonjs';
+import vue from 'rollup-plugin-vue';
 import babel from 'rollup-plugin-babel';
 
 
-function buildPlugins({min=false, iife=false}) {
+function buildPlugins({dir='wc',min=false, es5=false}) {
   let result = [];
-  result.push(html({
-    include: `modules/*.html`,
-    htmlMinifierOptions: {
-      collapseWhitespace: true,
-      collapseBooleanAttributes: true,
-      conservativeCollapse: true
-    }
-  }));
+  if ('wc' === dir) {
+    result.push(html({
+      include: `${dir}/*.html`,
+      htmlMinifierOptions: {
+        collapseWhitespace: true,
+        collapseBooleanAttributes: true,
+        conservativeCollapse: true
+      }
+    }));
+  } else if ('vue' === dir) {
+    result.push(commonjs());
+    result.push(vue());
+  }
   if (min) {
     result.push(minify({
       output: {
@@ -20,7 +27,7 @@ function buildPlugins({min=false, iife=false}) {
       }
     }));
   }
-  if (iife) {
+  if (es5) {
     result.push(babel({
       exclude: 'node_modules/**',
       presets: [['@babel/env', { modules: false }]]
@@ -29,15 +36,15 @@ function buildPlugins({min=false, iife=false}) {
   return result;
 }
 
-function buildConfig({filename='index', min=false, iife=false}) {
+function buildConfig({dir='wc', filename='index', min=false, es5=false, format='umd'}) {
   let minifyToken = (min) ? '.min': '';
   let result = {
-    input: `${filename}.js`,
-    plugins: buildPlugins({min, iife}),
+    input: `${dir}/${filename}.js`,
+    plugins: buildPlugins({dir, min, es5}),
     external: ['@sibley/app-component'],
     output: {
-      file: `dist/${filename}${minifyToken}.js`,
-      format: 'umd',
+      file: `dist/${dir}/${filename}${minifyToken}.js`,
+      format: format,
       name: 'bundle',
       sourcemap: min,
       globals: {
@@ -50,6 +57,8 @@ function buildConfig({filename='index', min=false, iife=false}) {
 
 
 export default [
-  buildConfig({iife: true}),
-  buildConfig({min: true, iife: true})
+  buildConfig({dir: 'wc', es5: true}),
+  buildConfig({dir: 'wc', min: true, es5: true}),
+  buildConfig({dir: 'vue', es5: true, format: 'iife'}),
+  buildConfig({dir: 'vue', min: true, es5: true, format: 'iife'})
 ];
