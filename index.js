@@ -1,5 +1,8 @@
-var bundle = (function (exports, appComponent) {
-  'use strict';
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@sibley/app-component')) :
+  typeof define === 'function' && define.amd ? define(['exports', '@sibley/app-component'], factory) :
+  (global = global || self, factory(global.bundle = {}, global.AppComponent));
+}(this, function (exports, appComponent) { 'use strict';
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -348,6 +351,6 @@ var bundle = (function (exports, appComponent) {
   exports.InRadio = InRadio;
   exports.SiteDetails = SiteDetails;
 
-  return exports;
+  Object.defineProperty(exports, '__esModule', { value: true });
 
-}({}, AppComponent));
+}));
