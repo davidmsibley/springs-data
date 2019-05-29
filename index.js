@@ -174,7 +174,7 @@ var bundle = (function (exports, appComponent) {
     return '_' + Math.random().toString(36).substr(2, 9);
   };
 
-  var tpl$1 = "<template data-element=\"choiceTpl\"> <div class=\"choice\"><input type=\"radio\" name id value><label for></label></div> </template> ";
+  var tpl$1 = "<template data-element=\"choiceTpl\"> <div class=\"choice\"><input type=\"radio\" name=\"{{name}}\" id=\"{{id}}\" value=\"{{choice}}\"><label for=\"{{id}}\">{{choice}}</label></div> </template> ";
 
   var InRadio =
   /*#__PURE__*/
@@ -233,15 +233,13 @@ var bundle = (function (exports, appComponent) {
         try {
           for (var _iterator = choices[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
             var choice = _step.value;
-            var result = template.content.cloneNode(true);
-            var id = genId();
+            var tplb = appComponent.AppComponent.stashe(template.content.cloneNode(true));
+            var context = {};
+            context.id = genId();
+            context.name = name;
+            context.choice = choice;
+            var result = tplb(context);
             var $input = result.querySelector('input');
-            var $label = result.querySelector('label');
-            $input.setAttribute('name', name);
-            $input.setAttribute('id', id);
-            $input.setAttribute('value', choice);
-            $label.setAttribute('for', id);
-            $label.textContent = choice;
 
             if (!checked) {
               $input.checked = true;
@@ -287,7 +285,7 @@ var bundle = (function (exports, appComponent) {
   }(appComponent.AppComponent);
   window.customElements.define('in-radio', InRadio);
 
-  var tpl$2 = "<style> @import url(\"./css/reset.css\");\n  @import url(\"./css/variables.css\");\n  @import url(\"./css/typography.css\");\n\n  [data-element=\"table\"] {\n    display: grid;\n    grid-template-columns: 30% 70%;\n    grid-gap: 0.5em;\n  }\n\n  td {\n    padding: 0.5em;\n  }\n\n  .label {\n    background-color: var(--palette-dark);\n    font-weight: var(--font-weight-bold);\n  }\n\n  .detail {\n    background-color: var(--palette-light);\n  } </style> <h1>{{siteinfo.County}} County Spring #{{siteinfo.SpringID}}</h1> <template data-element=\"rowTpl\"> <td class=\"label\"><label for></label></td><td class=\"detail\"><span id></span></td> </template> <div data-element=\"table\"></div>";
+  var tpl$2 = "<style> @import url(\"./css/reset.css\");\n  @import url(\"./css/variables.css\");\n  @import url(\"./css/typography.css\");\n\n  [data-element=\"table\"] {\n    display: grid;\n    grid-template-columns: 30% 70%;\n    grid-gap: 0.5em;\n  }\n\n  td {\n    padding: 0.5em;\n  }\n\n  .label {\n    background-color: var(--palette-dark);\n    font-weight: var(--font-weight-bold);\n  }\n\n  .detail {\n    background-color: var(--palette-light);\n  } </style> <h1>{{siteinfo.County}} County Spring #{{siteinfo.SpringID}}</h1> <template data-element=\"rowTpl\"> <td class=\"label\"><label for=\"{{id}}\">{{key}}</label></td><td class=\"detail\"><span id=\"{{id}}\">{{value}}</span></td> </template> <div data-element=\"table\"></div>";
 
   var SiteDetails =
   /*#__PURE__*/
@@ -326,14 +324,12 @@ var bundle = (function (exports, appComponent) {
               key = _Object$entries$_i[0],
               value = _Object$entries$_i[1];
 
-          var result = template.content.cloneNode(true);
-          var id = genId();
-          var $label = result.querySelector('label');
-          $label.setAttribute('for', id);
-          $label.textContent = key;
-          var $span = result.querySelector('span');
-          $span.setAttribute('id', id);
-          $span.textContent = value;
+          var tplb = appComponent.AppComponent.stashe(template.content.cloneNode(true));
+          var context = {};
+          context.id = genId();
+          context.key = key;
+          context.value = value;
+          var result = tplb(context);
           container.appendChild(result);
         }
       }
