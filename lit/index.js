@@ -45,7 +45,7 @@
         @import url("./css/typography.css");
       </style>
 
-      <h1 class="header">${this.title}</h1>
+      ${(!this.title)?'':litElement.html`<h1 class="header">${this.title}</h1>`}
       <slot></slot>
       <slot name="details" hidden></slot>
     `;
@@ -244,24 +244,300 @@
   }
   customElements.define('site-photos', SitePhotos);
 
+  class SiteWaterQuality extends litElement.LitElement {
+    static get properties() {
+      return {
+          siteinfo: Object
+      };
+    }
+
+    constructor() {
+      super();
+    }
+      static get styles(){
+          return litElement.css`
+            .label{
+               font-weight: bold;
+            }
+            .tick {
+               font-size: 13px;
+
+               /* why did I have to add this in?? */
+               font-family: 'open_sansregular','Open Sans',sans_serif; 
+
+               color: #777;
+            }
+            .tick line {
+               stroke: #777;
+            }
+            .highlight {
+               font-size: 14px;
+            }
+
+        `; 
+      }
+
+    render() {
+      return litElement.html`
+        <div>
+        <h2>Water quality</h2>
+        
+       <!-- <span class="label">conductivity: </span><span>${this.siteinfo.Conductivity_uS}</span><br> -->
+         <svg id="conductivity-chart"></svg><br>
+       <!-- <span class="label">temperature: </span><span>${this.siteinfo.Water_Temp_C}</span><br> -->
+         <svg id="temperature-chart"></svg><br>
+       <!-- <span class="label">pH: </span><span>${this.siteinfo.pH}</span><br> -->
+         <svg id="ph-chart"></svg>
+        </div>
+    `;
+    } //end render 
+      
+     firstUpdated() {
+        this.phchart = d3.select(this.renderRoot.querySelector('#ph-chart'));
+        this.temperaturechart = d3.select(this.renderRoot.querySelector('#temperature-chart'));
+        this.conductivitychart = d3.select(this.renderRoot.querySelector('#conductivity-chart'));
+     }
+     
+     updated() {
+        
+        var siteph = [{pH:this.siteinfo.pH}];
+        var siteWaterTemp = [{Water_Temp_C: this.siteinfo.Water_Temp_C}];
+        var siteConductivity = [{Conductivity_uS: this.siteinfo.Conductivity_uS}];
+        
+        
+        
+        /* ~~~~~~~~~ SVG SETUP ~~~~~~~~~ */
+        var svgWidth = 400;
+        
+        var phDotPlotOptions = {
+           svg: this.phchart, 
+           label: "pH",         
+           attributeKey: "pH", 
+
+           tickValues:[6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0], 
+           chartMin: 6, 
+           chartMax: 10,
+           
+           svgWidth: svgWidth,
+           siteInfo: this.siteinfo,
+           allData:  aggrData.data 
+           
+        };
+        
+        var tempDotPlotOptions = {
+           svg: this.temperaturechart, 
+           label: "Temperature (C)",
+           attributeKey: "Water_Temp_C", 
+           
+           tickValues:[5,7,9,11,13,15,17], 
+           chartMin: 5, 
+           chartMax: 17,
+           
+           svgWidth: svgWidth,
+           siteInfo: this.siteinfo, 
+           allData:  aggrData.data
+           
+        }; 
+        
+        var conductivityDotPlotOptions = {
+           svg: this.conductivitychart,
+           label: "Conductivity (uS)", 
+           attributeKey: "Conductivity_uS", 
+           
+           tickValues:[0, 500, 1000, 1500, 2000], 
+           chartMin: 0, 
+           chartMax: 2000,
+           
+           svgWidth: svgWidth,
+           siteInfo: this.siteinfo,
+           allData:  aggrData.data
+        
+        };
+        
+        dotPlot.draw(tempDotPlotOptions);
+        dotPlot.draw(phDotPlotOptions);
+        dotPlot.draw(conductivityDotPlotOptions);
+        
+     }  //end updated() 
+      
+  }   //end export class
+
+  customElements.define('site-water-quality', SiteWaterQuality);
+
+
+
+
+  // dotPlot is an immediately-invoked function expression. 
+
+  var dotPlot = (function (){
+     
+     // define functions that will be methods of dotPlot 
+     
+     var draw = function(options){ 
+        
+        console.log("draw dot plot ranging from "+options.chartMin+" to "+options.chartMax+" with the value "+options.siteInfo[options.attributeKey]+" highlighted. ");
+        
+        /* ---- SVG setup ---- */
+        
+        var svgHeight = 130;
+        var svgWidth = options.svgWidth;
+        var margin = {
+                       top: 50,
+                       right: 20,
+                       bottom: 50,
+                       left: 20  
+                     }; 
+        var chartWidth = svgWidth - margin.left - margin.right,
+        chartHeight = svgHeight - margin.top - margin.bottom;
+        
+        options.svg.attr('width', svgWidth).attr("height", svgHeight)
+          // .style('background', "#cecece")
+        ;
+        
+        //append a group.
+        var chartgroup = options.svg.append("g").attr("class", "chartgroup").attr("transform", "translate("+margin.left+", "+margin.top+")");  
+        
+        /* ~~~~~~~~~ Draw the chart ~~~~~~~~~ */
+        
+        var x_scale = d3.scaleLinear().domain([options.chartMin, options.chartMax]).range([0, chartWidth]); 
+              
+        var y_scale = d3.scaleBand().domain([""]).rangeRound([0, chartHeight]); 
+        
+        
+        var xAxis = chartgroup.append("g").attr("class", "x-axis");
+        xAxis
+           .attr("transform", "translate(0," + chartHeight + ")")
+           .call(
+             d3
+               .axisBottom(x_scale)
+               .tickSizeInner(-chartHeight)
+               .tickSizeOuter(0)
+               .tickPadding(5)
+               .tickValues(options.tickValues)
+           )
+           .call(g => g.select(".domain").remove());              // remove the horizontal line of the x axis
+        
+        
+        var yAxis = chartgroup.append("g").attr("class", "y-axis");    // the y axis will have one tick, which forms the horizontal line through the center of the chart. 
+        yAxis
+           .call(
+             d3
+               .axisLeft(y_scale)
+               .tickSizeInner(-chartWidth)
+               .tickSizeOuter(0)
+               .tickPadding(0)
+           )
+           .call(g => g.select(".domain").remove())           // no vertical line for the y axis (all vertical lines are x axis ticks)
+           .call(g => g.selectAll("text").remove());          // no labels on y axis
+
+       
+       /* ~~~~~~~~~ circles ~~~~~~~~~ */ 
+        
+       var circles = chartgroup.append("g").attr("class", "circles");
+        
+        circles.selectAll("circle")
+           .data(options.allData)
+           .enter()
+           .append("circle")
+           .attr("cx", function(d){return x_scale(d[options.attributeKey])})     // x position
+           .attr("cy", function(d){return chartHeight/2})     // y position
+           .attr('r', 5)                                      // radius 
+           .attr("fill", "#406058")                           // fill color
+           .attr("opacity", "0.7");                           // opacity
+        
+        
+        var highlight = chartgroup.append("g").attr("class", "highlight"); 
+        var highlightRadius = 8;
+        var highlightLineLength = 20; 
+        var highlightLabelPadding = 5;
+         
+        
+        var highlightData = [{rrr: options.siteInfo[options.attributeKey]}];
+        
+        highlight.selectAll("circle")
+           .data(highlightData)
+           .enter()
+           .append("circle")
+           .attr("cx", function(d){                       
+                          return x_scale(d.rrr)})              // x position
+           .attr("cy", function(d){return chartHeight/2})     // y position
+           .attr('r', highlightRadius)                        // radius 
+           .attr("fill", "#406058")                           // fill color
+           .attr("stroke", "#000")
+           .attr("stroke-width", 2)
+           .attr("opacity", "0.85");                           // opacity
+        
+        highlight.selectAll("polyline")
+           .data(highlightData)
+           .enter()
+           .append("polyline")
+           .attr('stroke', "#333333")      //set appearance
+           .attr("stroke-width", 2)        //set appearance
+           .style('fill', 'none')          //set appearance
+           .attr('points', function(d){
+                 
+                  // two points on each line: 
+                  // A: centroid of the circle
+                  // B: 10 px above the circle
+                  // each point is defined by an [x, y] 
+                 var startpoint = [0,0];
+                     startpoint[0] = x_scale(d.rrr);
+                     startpoint[1] = (chartHeight/2)-highlightRadius; 
+           
+                 var endpoint = [0,0];
+                     endpoint[0] = x_scale(d.rrr);
+                     endpoint[1] = (chartHeight/2)-highlightRadius-highlightLineLength; 
+           
+                  console.log("start, end", startpoint, endpoint);
+                  return [startpoint, endpoint]        // return A, B
+           });
+           
+        highlight.selectAll("text")
+           .data(highlightData)
+           .enter()
+           .append("text")
+           .attr("font-weight", "bold")
+           .html(function(d){ return options.label+": "+d.rrr})
+           .attr("transform", function(d){
+              var textpoint = [0, 0];
+                  textpoint[0] = x_scale(d.rrr);
+                  textpoint[1] = (chartHeight/2)-highlightRadius-highlightLineLength-highlightLabelPadding; 
+           return 'translate('+textpoint+')'
+
+           })
+           .style('text-anchor', "middle");
+       
+        
+        
+        
+     };
+     
+     // return an object with all methods of dotPlot named
+     return {
+        
+        draw: draw
+     }
+     
+  })();
+
   class SiteBedMaterials extends litElement.LitElement{
       static get properties(){
           return {
               siteinfo: Object
           };
       }
-      
+
       constructor() {
-          super(); 
+          super();
       }
-      
+
       static get styles(){
           return litElement.css`
         :host {
-            
+
         }
         text {
-            font-size: var(--font-size-small); 
+            font-size: var(--font-size-small);
             font-weight: bold;
             fill: #414c43;
 
@@ -277,128 +553,127 @@
         }
         `;
       }
-      
-      
+
+
       render() {
-          
+
           return litElement.html `
         <div>
         <h2>Spring-bed materials</h2>
         <svg id="bed-materials-chart"></svg>
         </div>
         `;
-          
+
       }
-      
+
       firstUpdated() {
           this.chart = d3.select(this.renderRoot.querySelector('#bed-materials-chart'));
       }
-      
+
       updated() {
-          
-          var width = 500; 
+
+          var width = 500;
           var height = 300;
-          var margin = 15; //space between the circle and the edge of the SVG 
+          var margin = 15; //space between the circle and the edge of the SVG
           var radius = (Math.min(width, height) / 2) - (margin * 2); //outer radius of the circle
-          
-          
+
+
           /* ~~~~~~~~~ SVG SETUP ~~~~~~~~~ */
-          
+
           this.chart.attr("width", width).attr("height", height);
-          
-          // set up groups within the svg:  
+
+          // set up groups within the svg:
           var masterGroup = this.chart.append("g").attr("transform", "translate("+width/2+","+height/2+")"); //append a group and move it to the center of the SVG.
-          var donutGroup = masterGroup.append("g").attr("class", "donutSegments"); 
-          var labelGroup = masterGroup.append("g").attr("class", "chartLabels"); 
-          var linesGroup = masterGroup.append("g").attr("class", "leaderLines"); 
-          
-          
+          var donutGroup = masterGroup.append("g").attr("class", "donutSegments");
+          var labelGroup = masterGroup.append("g").attr("class", "chartLabels");
+          var linesGroup = masterGroup.append("g").attr("class", "leaderLines");
+
+
           /* ~~~~~~~~~ DATA ~~~~~~~~~ */
-          
+
           var values = [
-              {material: "organic", percent: this.siteinfo.Percent_organic, color: "#406058"}, 
-              {material: "fines", percent: this.siteinfo.Percent_fines, color: "#adcaba"},  
-              {material: "sand", percent: this.siteinfo.Percent_sand, color: "#b7b098"},  
-              {material: "gravel", percent: this.siteinfo.Percent_gravel, color: "#cccccc"},  
-              {material: "cobble", percent: this.siteinfo.Percent_cobble, color: "#7b6888"},  
-              {material: "boulder", percent: this.siteinfo.Percent_boulder, color: "#685755"},  
+              {material: "organic", percent: this.siteinfo.Percent_organic, color: "#406058"},
+              {material: "fines", percent: this.siteinfo.Percent_fines, color: "#adcaba"},
+              {material: "sand", percent: this.siteinfo.Percent_sand, color: "#b7b098"},
+              {material: "gravel", percent: this.siteinfo.Percent_gravel, color: "#cccccc"},
+              {material: "cobble", percent: this.siteinfo.Percent_cobble, color: "#7b6888"},
+              {material: "boulder", percent: this.siteinfo.Percent_boulder, color: "#514b47"},
               {material: "bedrock", percent: this.siteinfo.Percent_bedrock, color: "#98abc5"}
           ];
-          
-          //process the data array for use in the donut chart... 
+
+          //process the data array for use in the donut chart...
            var pie = d3.pie()
-                      .sort(null)             // do not sort by size 
-                      .value(function(d){     // set the value that is used to size each pie chart segment     
+                      .sort(null)             // do not sort by size
+                      .value(function(d){     // set the value that is used to size each pie chart segment
                           return d.percent    // the data attribute that gives the charted value for each segment
-                      })(values);             // call this function, giving it the values array     
-          
-          // the pie function returns an array of objects representing the segments, containing their the start and end angles, data value, etc. 
-          
-          
-          // the pie function always returns 7 objects. filter it down to only the objects with a percent value greater than zero, so we are not going to draw any 0-dimension paths. 
-          var filterpie = pie.filter(function(el){return el.value > 0;}); 
-          
-          console.log("d3.pie() returns:", pie);
-          console.log("filtered pie is ", filterpie);
-          
-          /* ~~~~~~~~~ DONUT SEGMENTS ~~~~~~~~~ */ 
-          // right now, the website is set up so that it re-renders everything in the side panel when a each spring is queried. 
-          // therefore, everything is cleared and re-generated with each query. 
-          // this code could be designed differently if more dynamic updating were required. 
-          
-         
-          //define the properties of a donut arc. 
+                      })(values);             // call this function, giving it the values array
+
+          // the pie function returns an array of objects representing the segments, containing their the start and end angles, data value, etc.
+
+
+          // the pie function always returns 7 objects. filter it down to only the objects with a percent value greater than zero, so we are not going to draw any 0-dimension paths.
+          var filterpie = pie.filter(function(el){return el.value > 0;});
+
+          //console.log("filtered pie is ", filterpie);
+
+          /* ~~~~~~~~~ DONUT SEGMENTS ~~~~~~~~~ */
+          // right now, the website is set up so that it re-renders everything in the side panel when a each spring is queried.
+          // therefore, everything is cleared and re-generated with each query.
+          // this code could be designed differently if more dynamic updating were required.
+
+
+          //define the properties of a donut arc.
           var arc = d3.arc()
                       .outerRadius(radius)
-                      .innerRadius(radius - 45)   //lower numbers here make a thinner ring 
-                      .padAngle(0.025);              //about 0.025 is a good visible gap.                              
-          
-          
+                      .innerRadius(radius - 45)   //lower numbers here make a thinner ring
+                      .padAngle(0.025);              //about 0.025 is a good visible gap.
+
+
           donutGroup.selectAll("path")                            // we are using all paths within the group
-              .data(filterpie)                                          // we want to use the data as processed by the pie function. this returns the update selection, which includes all data values that have corresponding DOM elements. 
-              .enter()                                            // enter is a selection with placeholders for each data value (datum) that lacks a corresponding DOM element. 
-              .append("path")                                     // for any datum missing a DOM element, create one of these. 
-              .attr("d", arc)                                     // 
-              .attr("fill", function(d){return (d.data.color);})  // apply fill color, which is a function of the color data attribute.  
+              .data(filterpie)                                          // we want to use the data as processed by the pie function. this returns the update selection, which includes all data values that have corresponding DOM elements.
+              .enter()                                            // enter is a selection with placeholders for each data value (datum) that lacks a corresponding DOM element.
+              .append("path")                                     // for any datum missing a DOM element, create one of these.
+              .attr("d", arc)                                     //
+              .attr("fill", function(d){return (d.data.color);})  // apply fill color, which is a function of the color data attribute.
               .style("opacity", 1)                                // apply any styles for the donut chart segments
-              ;  
-          
-          
-          /* ~~~~~~~~~~ LABELS ~~~~~~~~~~~ */ 
-          
+              ;
+
+
+          /* ~~~~~~~~~~ LABELS ~~~~~~~~~~~ */
+
            // calculates the angle for the middle of a slice
-          function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }    
-          
-          // arc for positioning labels; won't be drawn. 
-          var outerArc = d3.arc()                         
-                          .innerRadius(radius * 1.1)      
-                          .outerRadius(radius * 1.1); 
-          
-          
-          
-          
+          function midAngle(d) { return d.startAngle + (d.endAngle - d.startAngle) / 2; }
+
+          // arc for positioning labels; won't be drawn.
+          var outerArc = d3.arc()
+                          .innerRadius(radius * 1.1)
+                          .outerRadius(radius * 1.1);
+
+
+
+
           var label = this.chart.select(".chartLabels").selectAll("text")
               .data(filterpie)
               .enter()
               .append('text')
-              .html(function(d){ return d.data.percent+"% "+d.data.material; })   // build the content of the label 
+              .html(function(d){ return d.data.percent+"% "+d.data.material; })   // build the content of the label
               .attr('dy', '.35em')                                                //vertical alignment
               .attr("transform", function(d){
-                  
-                      var anchorpoint = outerArc.centroid(d);                             // initially, set the anchorpoint of text to be where the bisecting angle meets the outer arc  
-                      anchorpoint[0] = radius * 1.15 * (midAngle(d) < Math.PI ? 1 : -1);  // then shift the anchorpoint on the x axis. 
+
+                      var anchorpoint = outerArc.centroid(d);                             // initially, set the anchorpoint of text to be where the bisecting angle meets the outer arc
+                      anchorpoint[0] = radius * 1.15 * (midAngle(d) < Math.PI ? 1 : -1);  // then shift the anchorpoint on the x axis.
                       // changes the point to be on left or right depending on where label is (multiply by 1 or by -1).
-                  
+
                       return 'translate('+anchorpoint+')';
               })
               .style('text-anchor', function(d){
                       // if slice centre is on the left, anchor text to start, otherwise anchor to end
                       return (midAngle(d)) < Math.PI ? 'start' : 'end';
-              })            
-              ; 
-          
-         
-          /* ~~~~~~~~~ LEADER LINES ~~~~~~~~~ */ 
+              })
+              ;
+
+
+          /* ~~~~~~~~~ LEADER LINES ~~~~~~~~~ */
           var polyline = this.chart.select(".leaderLines").selectAll('polyline')
               .data(filterpie)
               .enter()
@@ -407,21 +682,21 @@
               .attr("stroke-width", 1)        //set appearance
               .style('fill', 'none')          //set appearance
               .attr('points', function(d){
-                 
-                  // three points on each line: 
-                  // A: centroid of the donut segment 
+
+                  // three points on each line:
+                  // A: centroid of the donut segment
                   // B: where the bisecting angle meets the outer arc (breakpoint in the line)
                   // C: outer endpoint at the same y position as B, but with x coordinate near the side of the SVG
-                  
-                  var endpoint = outerArc.centroid(d);                            // initially, set the endpoint (C) to point B. 
-                  endpoint[0] = radius * 1.1 * (midAngle(d) < Math.PI ? 1 : -1);  // then shift point C on the x axis. 
-                  
-                  return [arc.centroid(d), outerArc.centroid(d), endpoint]        // return A, B, and C 
+
+                  var endpoint = outerArc.centroid(d);                            // initially, set the endpoint (C) to point B.
+                  endpoint[0] = radius * 1.1 * (midAngle(d) < Math.PI ? 1 : -1);  // then shift point C on the x axis.
+
+                  return [arc.centroid(d), outerArc.centroid(d), endpoint]        // return A, B, and C
               })
               ;
-          
+
       } //close updated method.
-  } //close export 
+  } //close export
   customElements.define('site-bed-materials', SiteBedMaterials);
 
   // https://gist.github.com/gordonbrander/2230317
@@ -483,9 +758,22 @@
         position: sticky;
         top: 0px;
         background-color: var(--palette-white);
-        padding: 1em;
+        padding: var(--font-size-extra-large);
         z-index: 10;
         width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: space-between;
+      }
+      .header h1 {
+        padding: 0;
+      }
+      .header i {
+        display: flex;
+        align-items: center;
+        font-size: var(--font-size-extra-large);
+        color: var(--palette-accent);
+        cursor: pointer;
       }
     `;
     }
@@ -515,15 +803,27 @@
       </style>
 
       ${(!this.siteinfo)? '' : litElement.html`
-        <h1 class="header">${this.siteinfo.County} County Spring #${this.siteinfo.SpringID}</h1>
+        <div class="header">
+          <h1>${this.siteinfo.County} County Spring #${this.siteinfo.SpringID}</h1>
+          <i class="material-icons clear-selection" title="Clear selection" @click="${this.fireClearSelection}">clear</i>
+        </div>
         <site-photos .photos="${this.photos}"></site-photos>
         <slot name="sketch"></slot>
+        <site-water-quality .siteinfo="${this.siteinfo}"></site-water-quality>
         <site-bed-materials .siteinfo="${this.siteinfo}"></site-bed-materials> 
         <div data-element="table">
           ${this.renderTable}
         </div>
       `}
     `;
+    }
+
+    fireClearSelection() {
+      let event = new CustomEvent('clear-selection', {
+        bubbles: true,
+        detail: {}
+      });
+      this.dispatchEvent(event);
     }
   }
   customElements.define('site-details', SiteDetails);
@@ -532,40 +832,41 @@
     'OBJECTID',
     'GlobalID',
     'File_Prefix',
-    'Site_Code'
+    'Site_Code',
+    'SpringID'
   ];
   let keyLookup = {
     'pH': { 'title': 'pH', 'desc': 'Measured as close to spring source as possible.' },
-    'Conductivity_uS': { 'title': 'Specific Conductance', 'desc': 'Measured as close to spring source as possible (µmho/cm).' },
-    'Water_Temp_C': { 'title': 'Temperature', 'desc': 'Measured as close to spring source as possible (°C).' },
+    'Conductivity_uS': { 'title': 'Specific Conductance (µmho/cm)', 'desc': 'Measured as close to spring source as possible (µmho/cm).' },
+    'Water_Temp_C': { 'title': 'Temperature (°C)', 'desc': 'Measured as close to spring source as possible (°C).' },
     'SpringID': { 'title': 'Spring ID', 'desc': 'Unique identifier within county.' },
     'County': { 'title': 'County', 'desc': 'County where spring is located.' },
     'Surveyor': { 'title': 'Surveyor(s)', 'desc': 'Who conducted the survey (initials).' },
     'Date': { 'title': 'Date', 'desc': 'Date of field survey.' },
     'Time': { 'title': 'Time', 'desc': 'Start time.' },
-    'Easting_WTM': { 'title': 'Easting', 'desc': 'Easting (WTM). As close to the spring source as possible.' },
-    'Northing_WTM': { 'title': 'Northing', 'desc': 'Northing (WTM). As close to the spring source as possible.' },
-    'Horz_Precision_m': { 'title': 'Horizontal Precision', 'desc': 'Horizontal accuracy of GPS position (meters).' },
+    'Easting_WTM': { 'title': 'Easting (WTM)', 'desc': 'Easting (WTM). As close to the spring source as possible.' },
+    'Northing_WTM': { 'title': 'Northing (WTM)', 'desc': 'Northing (WTM). As close to the spring source as possible.' },
+    'Horz_Precision_m': { 'title': 'Horizontal Precision (meters)', 'desc': 'Horizontal accuracy of GPS position (meters).' },
     'Max_PDOP': { 'title': 'Maximum PDOP', 'desc': 'Maximum positional dilution of precision (PDOP) during measurement.' },
-    'Elevation_m': { 'title': 'Elevation', 'desc': 'From digital elevation model (DEM) (meters).' },
+    'Elevation_m': { 'title': 'Elevation (meters)', 'desc': 'From digital elevation model (DEM) (meters).' },
     'elevation_source': { 'title': 'Elevation Source', 'desc': 'DEM source and horizontal resolution of DEM used to extract elevation.' },
     'Land_Owner': { 'title': 'Land Ownership', 'desc': 'List: state, county, city, NPS, USFS, tribal, military, private, other.' },
     'Access': { 'title': 'Access', 'desc': 'Directions to springs.' },
     'Ease_Access': { 'title': 'Ease of Access', 'desc': 'List: Easy access, Difficult access, Terrain prohibits access to other potential spring areas.' },
     'Land_Cover': { 'title': 'Land Cover', 'desc': 'List: urban, residential, agriculture, grassland, forest, open water, wetland, barren, shrubland, other.' },
-    'Air_Temp_F': { 'title': 'Air Temperature', 'desc': 'Air temperature on date surveyed (°F).' },
-    'Cloud_Cover_percent': { 'title': 'Cloud Cover', 'desc': 'Cloud cover at time of survey (%).' },
-    'Wind_Speed_mph': { 'title': 'Wind Speed', 'desc': 'Velocity measurement on date surveyed (mph).' },
+    'Air_Temp_F': { 'title': 'Air Temperature (°F)', 'desc': 'Air temperature on date surveyed (°F).' },
+    'Cloud_Cover_percent': { 'title': 'Cloud Cover (%)', 'desc': 'Cloud cover at time of survey (%).' },
+    'Wind_Speed_mph': { 'title': 'Wind Speed (mph)', 'desc': 'Velocity measurement on date surveyed (mph).' },
     'Aspect_degrees': { 'title': 'Aspect', 'desc': 'Direction that the spring orifice faces.' },
-    'Slope_degrees': { 'title': 'Slope', 'desc': 'Channel slope (°).' },
+    'Slope_degrees': { 'title': 'Slope (°)', 'desc': 'Channel slope (°).' },
     'Slope_Variability': { 'title': 'Slope Variability', 'desc': 'List: high, medium, low, none.' },
     'Condition': { 'title': 'Condition', 'desc': 'List: undisturbed, light, moderate, high.' },
     'Type_of_Disturbance': { 'title': 'Type of Disturbance', 'desc': 'List: wildlife, livestock, recreation, diversion, residence, impounded, dredging, flooding, trails, roadway, invasives, spring house, encased, raceways, human-made structure, trash, storm-water, drain tile, agriculture, other.' },
-    'Spring_Area_sqm': { 'title': 'Spring Area', 'desc': 'List: <2 m², 2-10 m², 10-100 m², 100-1000 m², 1000-10,000 m², 10,000-100,000 m²' },
+    'Spring_Area_sqm': { 'title': 'Spring Area (m²)', 'desc': 'List: <2 m², 2-10 m², 10-100 m², 100-1000 m², 1000-10,000 m², 10,000-100,000 m²' },
     'Surface_Types': { 'title': 'Surface Type(s)', 'desc': 'List: backwall, colluvial slope, sloping bedrock, pool, channel, spring mound, cave, other.' },
-    'Width_ft': { 'title': 'Channel or Pool Width', 'desc': 'If a channel or pool exists, the mean width (feet).' },
+    'Width_ft': { 'title': 'Channel or Pool Width (feet)', 'desc': 'If a channel or pool exists, the mean width (feet).' },
     'Width_Location': { 'title': 'Width Location', 'desc': 'List: pool, channel, pond, spring house, other.' },
-    'Depth_cm': { 'title': 'Channel or Pool Depth', 'desc': 'If a channel or pool exists, the mean depth (cm).' },
+    'Depth_cm': { 'title': 'Channel or Pool Depth (cm)', 'desc': 'If a channel or pool exists, the mean depth (cm).' },
     'Depth_Location': { 'title': 'Depth Location', 'desc': 'List: pool, channel, pond, spring house, other.' },
     'Percent_organic': { 'title': 'Percent Organic', 'desc': 'Qualitative estimate of the % organics. Described as close to spring source as possible.' },
     'Percent_fines': { 'title': 'Percent Fines', 'desc': 'Qualitative estimate of the % fines. Described as close to spring source as possible.' },
@@ -578,13 +879,13 @@
     'Spring_Type': { 'title': 'Spring Type', 'desc': 'List: helocrene, rheocrene, limnocrene, hillslope spring, cased, flowing well, other.' },
     'Spring_Source': { 'title': 'Spring Source', 'desc': 'List: single orifice, multiple orifices, diffuse flow, other.' },
     'Orifice_Geom': { 'title': 'Orifice Geomorphic Type', 'desc': 'List: seepage/filtration, fracture, tubular, contact.' },
-    'Discharge_cfs': { 'title': 'Discharge', 'desc': 'Spring flow (cfs).' },
+    'Discharge_cfs': { 'title': 'Discharge (cfs)', 'desc': 'Spring flow (cfs).' },
     'Flow_Accuracy': { 'title': 'Flow Accuracy', 'desc': 'Level of accuracy of flow measurement, List: low, high' },
     'Discharge_Meas': { 'title': 'How Measured', 'desc': 'List: timed volume, float velocity method, flume, AA meter, AD meter (acoustic Doppler meter), EM meter (electromagnetic meter).' },
     'Flow_Location': { 'title': 'Flow Location', 'desc': 'Where flow was measured.' },
     'Flow_percent': { 'title': 'Flow %', 'desc': 'Percent of flow captured (%).' },
-    'Veg_Bed_Cover_percent': { 'title': 'Vegetative Bed Cover', 'desc': 'The proportion of the spring pool bed or channel bed that is covered by live vegetation (%).' },
-    'Veg_Bank_Cover_percent': { 'title': 'Vegetative Bank Cover', 'desc': 'The proportion of the spring pool banks or channel banks that is covered by live vegetation (%).' },
+    'Veg_Bed_Cover_percent': { 'title': 'Vegetative Bed Cover (%)', 'desc': 'The proportion of the spring pool bed or channel bed that is covered by live vegetation (%).' },
+    'Veg_Bank_Cover_percent': { 'title': 'Vegetative Bank Cover (%)', 'desc': 'The proportion of the spring pool banks or channel banks that is covered by live vegetation (%).' },
     'Notes': { 'title': 'Notes', 'desc': 'Other notes as necessary.' },
     'GlobalID': { 'title': 'Global ID', 'desc': 'Automatically generated unique and global ID' },
     'gps_time_date': { 'title': 'GPS time and date', 'desc': 'Automatically generated GPS time and date stamp' },
@@ -794,7 +1095,7 @@
         <button @click="${this.normalPoints}">Normal Styling</button>
         <button @click="${this.typePoints}">Style by Spring Type</button>
         <button @click="${this.condPoints}">Style by Conductivity</button>
-        <button @click="${this.flowPoints}">Style by Flow</button>
+        <button @click="${this.qPoints}">Style by Discharge</button>
       </div>
     `;
     }
@@ -808,8 +1109,8 @@
     condPoints() {
       map.fire('condpoints');
     }
-    flowPoints() {
-      map.fire('flowpoints');
+    qPoints() {
+      map.fire('qpoints');
     }
   }
   customElements.define('map-controls', MapControls);
