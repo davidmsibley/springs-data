@@ -113,6 +113,10 @@
       color: var(--palette-900);
     }
 
+    .lbl-toggle:focus {
+      outline: thin dotted;
+    }
+
     .collapsible-content {
       max-height: 0px;
       overflow: hidden;
@@ -294,13 +298,13 @@
         margin: 0 auto;
       }
       .slide {
-        min-height: 40vh;
+        height: 40vh;
         display: flex;
         align-items: center;
         justify-content: center;
       }
       .slide img {
-        max-height: 40vh;
+        max-width: 100%;
       }
       .text {
         background-color: var(--palette-accent-transparent);
@@ -329,7 +333,7 @@
     <macro-carousel navigation pagination>
     <slot>
       ${this.photos.map((el) => (!el.FileURL)?'':litElement.html`
-      <div class="slide">
+      <div class="slide" title="Double-click to expand">
         <img 
           src="${el.FileURL}"
           alt="${el.Description}"
@@ -954,7 +958,8 @@
           </span>
           <h1>${this.siteinfo.County} County Spring #${this.siteinfo.SpringID}</h1>
           <span>
-            <a href="${window.router.router.link('/print/' + this.siteinfo.Site_Code)}" onclick="event.preventDefault()"><i class="material-icons toggle-print" title="Print layout" @click="${this.fireTogglePrint}" ?data-closed="${this.printLayout}">print</i></a>
+            <a href="${window.router.router.link('/print/' + this.siteinfo.Site_Code)}" onclick="event.preventDefault()"><i class="material-icons toggle-print" title="Print layout" @click="${this.fireTogglePrint}" ?data-closed="${this.printLayout}">zoom_out_map</i></a>
+            <i class="material-icons print-action" title="Print this page" @click="${this.handlePrint}" ?data-closed="${!this.printLayout}">print</i>
           </span>
         </div>
         <site-photos .photos="${this.photos}" ?print-layout="${this.printLayout}"></site-photos>
@@ -985,6 +990,10 @@
         </app-collapsible>
       `}
     `;
+    }
+
+    handlePrint() {
+      window.print();
     }
 
     fireClearSelection() {
@@ -1071,6 +1080,200 @@
     'sat_signals': { 'title': 'Number of satellites', 'desc': 'Automatically generated number of satellites visible' }
   };
 
+  class DownloadSection extends litElement.LitElement {
+    static get properties() {
+      return {
+        file: {
+          type: String
+        }
+      };
+    }
+
+    constructor() {
+      super();
+    }
+
+    static get styles() {
+      return litElement.css`
+    a {
+      text-decoration: none;
+    }
+    .download-button:hover {
+      color: var(--palette-900);
+    }
+    .download-button:focus {
+      outline: thin dotted;
+    }
+    .download-button {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+
+      cursor: pointer;
+      text-align: center;
+      background: var(--palette-white);
+      color: var(--palette-accent);
+      border: 1px solid var(--palette-light);
+      border-radius: var(--border-radius);
+      padding: var(--font-size);
+      margin: var(--border-radius) 0;
+    }
+    .download-button > div {
+      display: flex;
+      align-items: center;
+    }
+    .icon {
+      font-size: var(--icon-size-extra-large);
+    }
+    `;
+    }
+
+    render() {
+      return litElement.html`
+    <style>
+      @import url("./css/typography.css");
+    </style>
+    <a class="download-button" href="${this.file}" target="_blank" download>
+      <div>
+        <span>Download</span>
+      </div>
+      <div>
+        <i class="icon material-icons" title="Download">save_alt</i>
+      </div>
+    </a>
+    `;
+    }
+  }
+  customElements.define('download-section', DownloadSection);
+
+  /*
+   * Code from https://github.com/lukehaas/css-loaders
+  The MIT License (MIT)
+
+  Copyright (c) 2014 Luke Haas
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of
+  this software and associated documentation files (the "Software"), to deal in
+  the Software without restriction, including without limitation the rights to
+  use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+  the Software, and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   */
+  class AppSpinner extends litElement.LitElement {
+    static get properties() {
+      return {
+
+      };
+    }
+
+    constructor() {
+      super();
+    }
+
+    static get styles() {
+      return litElement.css`
+    .loader {
+      color: var(--palette-900);
+      font-size: 90px;
+      text-indent: -9999em;
+      overflow: hidden;
+      width: 1em;
+      height: 1em;
+      border-radius: 50%;
+      margin: 72px auto;
+      position: relative;
+      -webkit-transform: translateZ(0);
+      -ms-transform: translateZ(0);
+      transform: translateZ(0);
+      -webkit-animation: load6 1.7s infinite ease, round 1.7s infinite ease;
+      animation: load6 1.7s infinite ease, round 1.7s infinite ease;
+    }
+    @-webkit-keyframes load6 {
+      0% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+      5%,
+      95% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+      10%,
+      59% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em, -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em, -0.297em -0.775em 0 -0.477em;
+      }
+      20% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em, -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em, -0.749em -0.34em 0 -0.477em;
+      }
+      38% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em, -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em, -0.82em -0.09em 0 -0.477em;
+      }
+      100% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+    }
+    @keyframes load6 {
+      0% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+      5%,
+      95% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+      10%,
+      59% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em, -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em, -0.297em -0.775em 0 -0.477em;
+      }
+      20% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em, -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em, -0.749em -0.34em 0 -0.477em;
+      }
+      38% {
+        box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em, -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em, -0.82em -0.09em 0 -0.477em;
+      }
+      100% {
+        box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em;
+      }
+    }
+    @-webkit-keyframes round {
+      0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+      }
+      100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+      }
+    }
+    @keyframes round {
+      0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+      }
+      100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+      }
+    }
+    `;
+    }
+
+    render() {
+      return litElement.html`
+      <div class="loader">Loading...</div>
+    `;
+    }
+  }
+  customElements.define('app-spinner', AppSpinner);
+
   let pdfjsLib = window['pdfjs-dist/build/pdf'];
 
   class SiteSketch extends litElement.LitElement {
@@ -1135,8 +1338,10 @@
       div {
         min-height: 10em;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: space-between;
+
       }
       img {
         max-height: 70vh;
@@ -1147,9 +1352,12 @@
     render() {
       return litElement.html`
     <div>
-      ${(!this.imgsrc)?'':litElement.html`
+      ${(!this.imgsrc)?litElement.html`
+        <app-spinner></app-spinner>
+      `:litElement.html`
       <img src="${this.imgsrc}" />
       `}
+      <download-section file="${this.pdfsrc}"></download-section>
     </div>
     `;
     }
@@ -1182,9 +1390,10 @@
 
     static get styles() {
       return litElement.css`
-    div {
+    :host {
       min-height: 10em;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
     }
@@ -1193,9 +1402,7 @@
 
     render() {
       return litElement.html`
-    <div>
       <slot></slot>
-    </div>
     `;
     }
 
@@ -1271,19 +1478,47 @@
 
     static get styles() {
       return litElement.css`
+    .option-container {
+      box-sizing: border-box;
+      padding: var(--border-radius)
+    }
+    .icon {
+      font-size: var(--icon-size-extra-large);
+    }
     `;
     }
 
     render() {
       return litElement.html`
-      <div>
-        <h4>Map Point Styles:</h4>
-        <button @click="${this.normalPoints}">Normal Styling</button>
-        <button @click="${this.typePoints}">Style by Spring Type</button>
-        <button @click="${this.condPoints}">Style by Conductivity</button>
-        <button @click="${this.qPoints}">Style by Discharge</button>
+      <style>
+        @import url("./css/typography.css");
+      </style>
+      <div class="option-container">
+        <map-control-item @click="${this.typePoints}">
+          <div slot="item-before"><span>Spring Type</span></div>
+          <div slot="item"></div>
+          <i slot="item-after" class="icon material-icons" title="View on map">map</i>
+        </map-control-item>
+        <map-control-item @click="${this.condPoints}">
+          <div slot="item-before"><span>Conductivity</span></div>
+          <div slot="item"></div>
+          <i slot="item-after" class="icon material-icons" title="View on map">map</i>
+        </map-control-item>
+        <map-control-item @click="${this.qPoints}">
+          <div slot="item-before"><span>Discharge</span></div>
+          <div slot="item"></div>
+          <i slot="item-after" class="icon material-icons" title="View on map">map</i>
+        </map-control-item>
+        <map-control-item @click="${this.normalPoints}">
+          <div slot="item-before">Reset</div>
+          <i slot="item-after" class="icon material-icons" title="View on map">clear</i>
+        </map-control-item>
       </div>
     `;
+    }
+
+    handleSelection(fn) {
+
     }
 
     _fire(eventName, detail) {
@@ -1307,6 +1542,91 @@
     }
   }
   customElements.define('map-controls', MapControls);
+
+  class MapControlItem extends litElement.LitElement {
+    static get properties() {
+      return {
+        selected: {
+          type: Boolean
+        }
+      };
+    }
+
+    constructor() {
+      super();
+      this.genId = genId();
+    }
+
+    static get styles() {
+      return litElement.css`
+
+    input[type='checkbox'] {
+      display: none;
+    }
+    .lbl-toggle {
+      display: block;
+      text-align: center;
+      cursor: pointer;
+    }
+    .lbl-toggle:hover {
+      color: var(--palette-900);
+    }
+    .lbl-toggle:focus {
+      outline: thin dotted;
+    }
+    .option-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+
+      background: var(--palette-white);
+      color: var(--palette-accent);
+      border: 1px solid var(--palette-light);
+      border-radius: var(--border-radius);
+      padding: var(--font-size);
+      margin: var(--border-radius) 0;
+    }
+    /* .toggle:checked + .option-row {
+      background: var(--palette-light);
+      color: var(--palette-900);
+    } */
+    .option-row > div {
+      display: flex;
+      align-items: center;
+    }
+    `;
+    }
+
+    render() {
+      return litElement.html`
+    <input id="${this.genId}" class="toggle" type="checkbox">
+    <label for="${this.genId}" class="lbl-toggle option-row" tabindex="0">
+      <!-- <div class="option-row"> -->
+        <div><slot name="item-before"></slot></div>
+        <div><slot name="item"></slot></div>
+        <div><slot name="item-after"></slot></div>
+      <!-- </div> -->
+    </label>
+    `;
+    }
+
+    firstUpdated() {
+      this.$input = this.renderRoot.querySelector('.toggle');
+      let myLabels = this.renderRoot.querySelectorAll('.lbl-toggle');
+
+      Array.from(myLabels).forEach(label => {
+        label.addEventListener('keydown', e => {
+          // 32 === spacebar
+          // 13 === enter
+          if (e.which === 32 || e.which === 13) {
+            e.preventDefault();
+            label.click();
+          }      });
+      });
+    }
+  }
+  customElements.define('map-control-item', MapControlItem);
 
   exports.AppCollapsible = AppCollapsible;
   exports.AppSidebar = AppSidebar;
